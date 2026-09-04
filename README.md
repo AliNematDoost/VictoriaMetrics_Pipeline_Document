@@ -1,18 +1,18 @@
 # Task Report 
 
 ## Implementing Metrics in Django application 
----
+
 At first all metrics added to code based on their functionality. Metrics are added to `./clusterproject/metrics.py` and they are used where they should to change the metrics while the code is running.
 Added metrics are exposed on /metrics.
 
 Django project repo : `https://github.com/AliNematDoost/Django-Project-Hamamouz`
 
-## Deploying application on KIND cluster 
----
-Then deployed the application on KIND local cluster and exposed endpoints on localhost. now /metrics is accessible using http://localhost/api/metrics on localhost.
+## Deploying application on k3s cluster 
+
+Then deployed the application on k3s cluster and exposed endpoints on host `nematdoust.osdl.ir` using ingress. now /api/metrics is accessible using http://nematdoust.osdl.ir/api/metrics.
 
 ## Deploying VictoriaMetrics Pipeline
----
+
 
 ### Concepts I learned here
 Before starting anything, I preferred to read more about concepts in this part, so I got these:
