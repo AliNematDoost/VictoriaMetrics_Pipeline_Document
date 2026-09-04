@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vm-ingress
+  namespace: monitoring-system
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /vmui
+            pathType: Prefix
+            backend:
+              service:
+                name: vmsingle-hamamooz-vmsingle
+                port:
+                  number: 8429
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /prometheus
+            pathType: Prefix
+            backend:
+              service:
+                name: vmsingle-hamamooz-vmsingle
+                port:
+                  number: 8429

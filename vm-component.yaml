@@ -1,0 +1,51 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMSingle
+metadata:
+  name: hamamooz-vmsingle
+  namespace: monitoring-system
+spec:
+  retentionPeriod: "4d"
+  storage:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+---
+
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: django-metrics
+  namespace: monitoring-system
+spec:
+  namespaceSelector:
+    matchNames:
+      - application
+  selector:
+    matchLabels:
+      service: django
+  endpoints:
+    - port: metrics
+      path: /api/metrics
+---
+
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAgent
+metadata:
+  name: hamamooz-vmagent
+  namespace: monitoring-system
+spec:
+  serviceScrapeNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: monitoring-system
+
+  serviceScrapeSelector:
+    matchLabels: {}
+
+  replicaCount: 1
+
+  scrapeInterval: 15s
+
+  remoteWrite:
+    - url: "http://vmsingle-hamamooz-vmsingle.monitoring-system.svc:8429/api/v1/write"
