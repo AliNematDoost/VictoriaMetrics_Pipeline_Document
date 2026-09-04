@@ -13,9 +13,9 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: vmsingle-hamamooz-vmsingle
+                name: vmauth-vmauth
                 port:
-                  number: 8429
+                  number: 8427
     - host: nematdoust.osdl.ir
       http:
         paths:
@@ -23,6 +23,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: vmsingle-hamamooz-vmsingle
+                name: vmauth-vmauth
                 port:
-                  number: 8429
+                  number: 8427

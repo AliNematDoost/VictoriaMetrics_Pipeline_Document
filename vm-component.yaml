@@ -1,7 +1,7 @@
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMSingle
 metadata:
-  name: hamamooz-vmsingle
+  name: vmsingle
   namespace: monitoring-system
 spec:
   retentionPeriod: "4d"
@@ -16,7 +16,7 @@ spec:
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMServiceScrape
 metadata:
-  name: django-metrics
+  name: vmservicescrape
   namespace: monitoring-system
 spec:
   namespaceSelector:
@@ -33,7 +33,7 @@ spec:
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMAgent
 metadata:
-  name: hamamooz-vmagent
+  name: vmagent
   namespace: monitoring-system
 spec:
   serviceScrapeNamespaceSelector:
@@ -48,4 +48,11 @@ spec:
   scrapeInterval: 15s
 
   remoteWrite:
-    - url: "http://vmsingle-hamamooz-vmsingle.monitoring-system.svc:8429/api/v1/write"
+    - url: "http://vmauth-hamamooz-vmauth.monitoring-system.svc:8427/api/v1/write"
+      basicAuth:
+        username:
+          name: vmuser-vmagent-writer
+          key: username
+        password:
+          name: umuser-vmagent-writer
+          key: password

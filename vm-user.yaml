@@ -1,0 +1,29 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMUser
+metadata:
+  name: vmui-reader
+  namespace: monitoring-system
+spec:
+  username: reader
+  password: "reader123"
+  targetRefs:
+    - static:
+        url: "http://vmsingle-hamamooz-vmsingle.monitoring-system.svc:8429"
+      paths:
+        - "/vmui"
+        - "/vmui/.*"
+        - "/prometheus/.*"
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMUser
+metadata:
+  name: vmagent-writer
+  namespace: monitoring-system
+spec:
+  username: writer
+  password: "writer123"
+  targetRefs:
+    - static:
+        url: "http://vmsingle-hamamooz-vmsingle.monitoring-system.svc:8429"
+      paths:
+        - "/api/v1/write"
