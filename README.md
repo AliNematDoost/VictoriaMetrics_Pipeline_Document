@@ -416,4 +416,18 @@ VMAgent attaches Basic Auth credentials (pulled from the `vmuser-vmagent-writer`
           key: password
 ```
 
-credentials are extracted from secrets that were created by operator after applying VMUsers. 
+credentials are extracted from secrets that were created by operator after applying VMUsers.
+
+## Testing VictoriaMetrics
+
+<img width="1919" height="813" alt="image" src="https://github.com/user-attachments/assets/b7a69f2f-9906-4edb-b925-232a58187534" />
+
+For metric `hamamooz_backup_jobs_total` we have the state above shown in VMUI. Now creating a new backup and getting the list of backups of an app will results in change in metrics:
+
+<img width="1919" height="813" alt="image" src="https://github.com/user-attachments/assets/375ee891-23c8-4600-a39d-a67fd99d863d" />
+
+So with this test, we can understand that VMUser and VMAuth are performing as expected too. I am reading and running queries in VMUI ( indirectly on VMSingle ) with valid credentials and VMAgent is collecting and remote writing new metrics on VMSingle with valid credentials. So based on that VMAuth is also working alright and authenticates users and accesses. 
+
+- accessing VMUI with wrong credentials results in getting 401 unathorized:
+
+<img width="1919" height="813" alt="image" src="https://github.com/user-attachments/assets/c56e2064-98c6-48ac-87c7-1022a3e9a714" />
