@@ -1,0 +1,14 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: backup-rule
+  namespace: monitoring-system
+  labels:
+    app: vmrule
+spec:
+  groups:
+    - name: test-alert
+      rules:
+        - alert: BackupJobsCountTooHigh
+          expr: sum(hamamooz_backup_jobs_total) > 10 and sum(hamamooz_backup_jobs_total) < 15
+          for: 20s
