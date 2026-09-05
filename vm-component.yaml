@@ -54,5 +54,5 @@ spec:
           name: vmuser-vmagent-writer
           key: username
         password:
-          name: umuser-vmagent-writer
+          name: vmuser-vmagent-writer
           key: password
