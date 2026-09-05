@@ -8,11 +8,12 @@ spec:
   password: "reader123"
   targetRefs:
     - static:
-        url: "http://vmsingle-hamamooz-vmsingle.monitoring-system.svc:8429"
+        url: "http://vmsingle-vmsingle.monitoring-system.svc:8429"
       paths:
         - "/vmui"
         - "/vmui/.*"
         - "/prometheus/.*"
+        - "/api/.*"
 ---
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMUser
@@ -24,6 +25,6 @@ spec:
   password: "writer123"
   targetRefs:
     - static:
-        url: "http://vmsingle-hamamooz-vmsingle.monitoring-system.svc:8429"
+        url: "http://vmsingle-vmsingle.monitoring-system.svc:8429"
       paths:
         - "/api/v1/write"

@@ -1,0 +1,271 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-pvc
+  namespace: monitoring-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-dep
+  namespace: monitoring-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      monitor: grafana
+  template:
+    metadata:
+      labels:
+        monitor: grafana
+    spec:
+      containers:
+        - name: grafana-app
+          image: hub.hamdocker.ir/grafana/grafana:latest
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "200m"
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: grafana-storage
+              mountPath: /var/lib/grafana
+
+      volumes:
+        - name: grafana-storage
+          persistentVolumeClaim:
+            claimName: grafana-pvc
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-service
+  namespace: monitoring-system
+spec:
+  selector:
+    monitor: grafana
+  ports:
+    - port: 3000
+      targetPort: 3000
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+  namespace: monitoring-system
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /api/login
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /api/frontend-metrics
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /api/datasources
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /apis/preferences.grafana.app
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /api/user
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /api/plugins
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /apis/features.grafana.app
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /api/frontend
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /api/access-control
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /api/gnet
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /apis/dashboard.grafana.app
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /api/folders
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /apis/provisioning.grafana.app
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /apis/quotas.grafana.app
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /api/teams
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /apis/dashboard.grafana.app
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /api/prometheus
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /api/ds
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /api/annotations
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000

@@ -48,7 +48,7 @@ spec:
   scrapeInterval: 15s
 
   remoteWrite:
-    - url: "http://vmauth-hamamooz-vmauth.monitoring-system.svc:8427/api/v1/write"
+    - url: "http://vmauth-vmauth.monitoring-system.svc:8427/api/v1/write"
       basicAuth:
         username:
           name: vmuser-vmagent-writer
