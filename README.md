@@ -285,3 +285,149 @@ job=serviceScrape/monitoring-system/vmagent-hamamooz-vmagent/1 (1/1 up)
 job=serviceScrape/monitoring-system/vmsingle-hamamooz-vmsingle/0 (1/1 up)
 	state=up, endpoint=http://10.42.1.67:8429/metrics, labels={container="vmsingle",endpoint="http",instance="10.42.1.67:8429",job="vmsingle-hamamooz-vmsingle",namespace="monitoring-system",pod="vmsingle-hamamooz-vmsingle-5bf65bdbcd-sj2p7",service="vmsingle-hamamooz-vmsingle",victoriametrics_app="true"}, scrapes_total=4693, scrapes_failed=0, last_scrape=10.218s ago, scrape_duration=6ms, scrape_response_size=67KiB, samples_scraped=1101, error=
 ```
+
+## Iteration 2: Security
+
+Now every user can query VMSimgle without any authentication or authorization. In order to limit access to writing ot or reading from VMSingle I decided to use VMUser+VMAuth. 
+
+### VMUser
+For that reason I created two VMUser CRs, One for writing credentials and one for reading:
+```
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMUser
+metadata:
+  name: vmui-reader
+  namespace: monitoring-system
+spec:
+  username: reader
+  password: PASSWORD
+  targetRefs:
+    - static:
+        url: "http://vmsingle-hamamooz-vmsingle.monitoring-system.svc:8429"
+      paths:
+        - "/vmui"
+        - "/vmui/.*"
+        - "/prometheus/.*"
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMUser
+metadata:
+  name: vmagent-writer
+  namespace: monitoring-system
+spec:
+  username: writer
+  password: PASSWORD
+  targetRefs:
+    - static:
+        url: "http://vmsingle-hamamooz-vmsingle.monitoring-system.svc:8429"
+      paths:
+        - "/api/v1/write"
+```
+I have declared a username and password for each user which they will be authenticated with them in VMAuth. Also declared a permitted paths for each user, which VMAuth will use them to check if user is authorized to access paths or not. And also declared a targetRefs for each user that is the prefix-url that VMAuth sends new request to url + input_path.
+
+After applying new VMUsers, operator will create a secret containing username and password for each VMUser:
+```
+k describe secret vmuser-vmagent-writer -n monitoring-system
+Name:         vmuser-vmagent-writer
+Namespace:    monitoring-system
+Labels:       app.kubernetes.io/component=monitoring
+              app.kubernetes.io/instance=vmagent-writer
+              app.kubernetes.io/name=vmuser
+              managed-by=vm-operator
+Annotations:  <none>
+
+Type:  Opaque
+
+Data
+====
+password:  9 bytes
+username:  6 bytes
+```
+
+### VMAuth
+
+VMAuth is a reverse proxy that sits front of VMSingle and every request that used to go directly to VMSingle should now be routed to VMAuth and checked first ( to see if the user is authorized or not )
+
+```
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAuth
+metadata:
+  name: vmauth
+  namespace: monitoring-system
+spec:
+  selectAllByDefault: true
+  replicaCount: 1
+```
+
+It selects all users defined in namespace monitoring-system using VMUser. 
+
+Now every request that used to go directly to VMSingle should now be routed to VMAuth, for that reason I have configured ingress rules to route traffic to VMAuth instead of VMSingle:
+```
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vm-ingress
+  namespace: monitoring-system
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /vmui
+            pathType: Prefix
+            backend:
+              service:
+                name: vmauth-vmauth
+                port:
+                  number: 8427
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /prometheus
+            pathType: Prefix
+            backend:
+              service:
+                name: vmauth-vmauth
+                port:
+                  number: 8427
+```
+
+After VMAuth receives the request, it performs two checks in sequence:
+
+1. **Authentication**: it extracts the credentials from the request's Basic Auth header and matches them against the set of `VMUser` objects it loaded (via `selectAllByDefault: true`). If no `VMUser` matches, the request is rejected with `401 Unauthorized`.
+2. **Authorization**: once a matching user is found, VMAuth checks whether the requested path matches one of that user's `paths` entries. If the path isn't in the allowed list, the request is rejected. the user is a valid VMAuth user, but not permitted to access that particular endpoint.
+
+If both checks pass, VMAuth builds a new outgoing request by concatenating that `VMUser`'s `targetRefs.static.url` with the original request's path and query string, then forwards it to VMSingle. VMSingle receives this exactly as if the client had called it directly. it has no awareness that authentication happened upstream.
+
+The write path follows the same two-step logic, just with a different `VMUser`: 
+
+VMAgent attaches Basic Auth credentials (pulled from the `vmuser-vmagent-writer` secret) to every `remoteWrite` request it sends to VMAuth. VMAuth authenticates those credentials against the `vmagent-writer` VMUser, confirms `/api/v1/write` is in its permitted paths, and only then forwards the write to VMSingle. The mechanism is identical to the read flow. the only difference is which `VMUser` is involved and which path is being checked :
+
+```
+  remoteWrite:
+    - url: "http://vmauth-hamamooz-vmauth.monitoring-system.svc:8427/api/v1/write"
+      basicAuth:
+        username:
+          name: vmuser-vmagent-writer
+          key: username
+        password:
+          name: umuser-vmagent-writer
+          key: password
+```
+
+credentials are extracted from secrets that were created by operator after applying VMUsers.
+
+## Testing VictoriaMetrics
+
+<img width="1919" height="813" alt="image" src="https://github.com/user-attachments/assets/b7a69f2f-9906-4edb-b925-232a58187534" />
+
+For metric `hamamooz_backup_jobs_total` we have the state above shown in VMUI. Now creating a new backup and getting the list of backups of an app will results in change in metrics:
+
+<img width="1919" height="813" alt="image" src="https://github.com/user-attachments/assets/375ee891-23c8-4600-a39d-a67fd99d863d" />
+
+So with this test, we can understand that VMUser and VMAuth are performing as expected too. I am reading and running queries in VMUI ( indirectly on VMSingle ) with valid credentials and VMAgent is collecting and remote writing new metrics on VMSingle with valid credentials. So based on that VMAuth is also working alright and authenticates users and accesses. 
+
+- accessing VMUI with wrong credentials results in getting 401 unathorized:
+
+<img width="1919" height="813" alt="image" src="https://github.com/user-attachments/assets/c56e2064-98c6-48ac-87c7-1022a3e9a714" />
