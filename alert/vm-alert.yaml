@@ -7,10 +7,10 @@ spec:
   replicaCount: 1
   datasource:
     url: "http://vmsingle-vmsingle.monitoring-system.svc:8429"
-  notifier:
-    url: "http://vmalertmanager-vmalertmanager.monitoring-system.svc:9093"
+  notifiers:
+    - url: "http://vmalertmanager-vmalertmanager.monitoring-system.svc:9093"
   remoteWrite:
-    url: "http://vmsingle-vmsingle.monitoring-system.svc:8429/api/v1/write"
+    url: "http://vmsingle-vmsingle.monitoring-system.svc:8429"
   evaluationInterval: "30s"
   ruleSelector:
     matchLabels:

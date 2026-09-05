@@ -10,5 +10,5 @@ spec:
     - name: test-alert
       rules:
         - alert: BackupJobsCountTooHigh
-          expr: sum(hamamooz_backup_jobs_total) > 10 and sum(hamamooz_backup_jobs_total) < 15
+          expr: sum(hamamooz_backup_jobs_total) > 10
           for: 20s
