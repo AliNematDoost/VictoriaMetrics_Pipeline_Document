@@ -509,7 +509,7 @@ spec:
 ```
 
 I have defined a receiver here to send alerts. The receiver of alert is chosen and also specified in `receivers` section. Also some other configs are needed as below:
-**group_wait**: after getting a fired alert, VMAlertManager first waits for 10 seconds in order to get some other alerts with the same group name and fire them all together with only one notification instead of one notif for each of them. 
+**group_wait**: after getting a fired alert, VMAlertManager first waits for 10 seconds in order to get some other alerts with the same group name and fire them all together with only one notification instead of one notif for each of them. Also if the state of alert changes from firing to pending, we will receive a notification for that because of `send_resolved: true`.
 
 **group_interval**: VMAlertManager searches each group of alerts and check if new alert is fired or if `repeat_interval` is reached, if one of them is happened then a notif of alert will be sent. 
 
@@ -535,3 +535,130 @@ Notification webhook is correctly showing fired alerts of the same group and nam
 
 but let's check alert status after each hop of pipeline :
 
+1. First I want to check if VMAlert has successfully taken the expression from VMRule:
+
+For that purpose, First I port-forwarded service of VMAlert on port 8080 of localhost:
+
+- get the list of services:
+```
+k get svc -n monitoring-system
+NAME                                    TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+grafana-service                         ClusterIP   10.43.161.153   <none>        3000/TCP                     2d5h
+vm-operator-victoria-metrics-operator   ClusterIP   10.43.142.87    <none>        8080/TCP,9443/TCP            3d22h
+vmagent-vmagent                         ClusterIP   10.43.19.250    <none>        8429/TCP                     2d
+vmalert-vmalert                         ClusterIP   10.43.209.169   <none>        8080/TCP                     46h
+vmalertmanager-vmalertmanager           ClusterIP   None            <none>        9093/TCP,9094/TCP,9094/UDP   45h
+vmauth-vmauth                           ClusterIP   10.43.156.155   <none>        8427/TCP                     3d
+vmsingle-vmsingle                       ClusterIP   10.43.110.115   <none>        8429/TCP,8428/TCP            3d
+webhook-service                         ClusterIP   10.43.97.99     <none>        8080/TCP                     18h
+```
+
+- port-forward the service of VMAlert:
+
+```
+k port-forward svc/vmalert-vmalert -n monitoring-system 8080:8080
+Forwarding from 127.0.0.1:8080 -> 8080
+Forwarding from [::1]:8080 -> 8080
+```
+
+- Now I got the list of alerts using this API call:
+
+```
+curl -s http://localhost:8080/api/v1/alerts | jq
+{
+  "status": "success",
+  "data": {
+    "alerts": [
+      {
+        "state": "firing",
+        "name": "BackupJobsCountTooHigh",
+        "value": "14",
+        "labels": {
+          "alertgroup": "test-alert",
+          "alertname": "BackupJobsCountTooHigh"
+        },
+        "annotations": {},
+        "activeAt": "2026-09-07T06:12:05Z",
+        "id": "13676737222207199333",
+        "rule_id": "7093531774342171864",
+        "group_id": "14948295105770102364",
+        "expression": "sum(hamamooz_backup_jobs_total{operation=\"create\"}) > 10",
+        "source": "http://vmalert-vmalert-7d7d5fbb97-s8ljr:8080/vmalert/alert?group_id=14948295105770102364&alert_id=13676737222207199333",
+        "restored": false,
+        "stabilizing": false
+      }
+    ]
+  }
+}
+```
+
+As we expected, our alert is present in list and its state is `firing`. Also the value of query ( 14 ) is given in output, so that proves VMAlert has queried the expression on VMSingle successfully and got the value of metric.
+
+So this pipeline is working as expected: 
+**Expression of Rule defined in VMRule --> VMAlert --> Query executed on VMSingle by VMAlert**
+
+2. Next hop is notifier which is VMAlertManager that should send firing alert to webhook:
+
+VMAlert is actually sending alerts to VMAlertmanager:
+```
+k port-forward svc/vmalert-vmalert -n monitoring-system 8080:8080
+Forwarding from 127.0.0.1:8080 -> 8080
+Forwarding from [::1]:8080 -> 8080
+
+
+curl -s http://localhost:8080/api/v1/notifiers | jq
+{
+  "status": "success",
+  "data": {
+    "notifiers": [
+      {
+        "kind": "static",
+        "targets": [
+          {
+            "address": "http://vmalertmanager-vmalertmanager.monitoring-system.svc:9093/api/v2/alerts",
+            "labels": {},
+            "lastError": ""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+And VMAlertManager is also getting alert from VMAlert successfully:
+```
+k -n monitoring-system port-forward statefulset/vmalertmanager-vmalertmanager 9093:9093
+Forwarding from 127.0.0.1:9093 -> 9093
+Forwarding from [::1]:9093 -> 9093
+
+
+curl -s http://localhost:9093/api/v2/alerts | jq
+[
+  {
+    "annotations": {},
+    "endsAt": "2026-09-07T15:05:39.061Z",
+    "fingerprint": "7d4ae5877a4dd249",
+    "receivers": [
+      {
+        "name": "webhook"
+      }
+    ],
+    "startsAt": "2026-09-05T18:05:30.000Z",
+    "status": {
+      "inhibitedBy": [],
+      "mutedBy": [],
+      "silencedBy": [],
+      "state": "active"
+    },
+    "updatedAt": "2026-09-07T15:05:19.057Z",
+    "generatorURL": "http://vmalert-vmalert-7d7d5fbb97-s8ljr:8080/vmalert/alert?group_id=14948295105770102364&alert_id=13676737222207199333",
+    "labels": {
+      "alertgroup": "test-alert",
+      "alertname": "BackupJobsCountTooHigh"
+    }
+  }
+]
+```
+
+3. Getting the list of alerts in `http://nematdoust.osdl.ir/webhookapp/alerts` proves that POST requests from VMAlertManager reach webhook. ( since only service sending request to webhook is VMAlertManager )
