@@ -5,4 +5,14 @@ metadata:
   namespace: monitoring-system
 spec:
   replicaCount: 1
-  configSecret: alertmanager-config
+  configRawYaml: |
+    route:
+      receiver: 'webhook'
+      group_wait: 10s
+      group_interval: 30s
+      repeat_interval: 1m
+    receivers:
+      - name: 'webhook'
+        webhook_configs:
+          - url: 'http://webhook-service.monitoring-system.svc.cluster.local:8080/webhookapp/alerts'
+            send_resolved: true
