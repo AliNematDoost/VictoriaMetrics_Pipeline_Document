@@ -11,7 +11,7 @@ spec:
     - url: "http://vmalertmanager-vmalertmanager.monitoring-system.svc:9093"
   remoteWrite:
     url: "http://vmsingle-vmsingle.monitoring-system.svc:8429"
-  evaluationInterval: "30s"
+  evaluationInterval: 5s
   ruleSelector:
     matchLabels:
       app: vmrule

@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager-webhook
+  namespace: monitoring-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webhook
+  template:
+    metadata:
+      labels:
+        app: webhook
+    spec:
+      containers:
+        - name: webhook
+          image: ghcr.io/alinematdoost/rest-api-webhook:v2
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook-service
+  namespace: monitoring-system
+spec:
+  selector:
+    app: webhook
+  ports:
+    - port: 8080
+      targetPort: 8080
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webhook-ingress
+  namespace: monitoring-system
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: nematdoust.osdl.ir
+      http:
+        paths:
+          - path: /webhookapp/alerts
+            pathType: Prefix
+            backend:
+              service:
+                name: webhook-service
+                port:
+                  number: 8080

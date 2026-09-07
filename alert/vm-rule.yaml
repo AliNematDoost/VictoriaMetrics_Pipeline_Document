@@ -10,5 +10,5 @@ spec:
     - name: test-alert
       rules:
         - alert: BackupJobsCountTooHigh
-          expr: vector(1) > 0
-          for: 20s
+          expr: sum(hamamooz_backup_jobs_total{operation="create"}) > 10
+          for: 1s
