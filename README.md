@@ -430,4 +430,37 @@ So with this test, we can understand that VMUser and VMAuth are performing as ex
 
 - accessing VMUI with wrong credentials results in getting 401 unathorized:
 
-<img width="1919" height="813" alt="image" src="https://github.com/user-attachments/assets/c56e2064-98c6-48ac-87c7-1022a3e9a714" />
+<img width="569" height="283" alt="image" src="https://github.com/user-attachments/assets/5043c86a-cb2c-4b76-81c8-ddcc1bf54513" />
+
+## Alerting Pipeline
+
+Now I am going to deploy an alerting pipeline. For that reason I targeted one of my own metrics as condition of alert. 
+
+For creating alerting pipeline I have created these VictoriaMetrics components:
+1. VMRule: Define the rule ( condition ) that should be checked and fired if condition is true
+
+```
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: backup-rule
+  namespace: monitoring-system
+  labels:
+    app: vmrule
+spec:
+  groups:
+    - name: test-alert
+      rules:
+        - alert: BackupJobsCountTooHigh
+          expr: sum(hamamooz_backup_jobs_total{operation="create"}) > 10
+          for: 1s
+```
+
+
+   
+3. VMAlert: Get rules from VMRule and query them to VMSingle, if true notify VMAlertManager and remote write to VMSingle ( optional but nice to have )
+4. VMAlertManager: Check fired alerts and send them periodically to a service to expose alerts to user.
+5. Alert exposing service created using Flask: Get alerts from VMAlertmanager and show them to user.
+
+
+
