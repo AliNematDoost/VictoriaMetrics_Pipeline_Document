@@ -432,6 +432,15 @@ So with this test, we can understand that VMUser and VMAuth are performing as ex
 
 <img width="569" height="283" alt="image" src="https://github.com/user-attachments/assets/5043c86a-cb2c-4b76-81c8-ddcc1bf54513" />
 
+## Pre-built Dashboards for VMSingle and VMAgent in Grafana
+
+I have created components for deploying Grafana which are placed in `grafana/` ( deployment + service + ingress rule + pvc to persistent dashboards and datas we add to Grafana )
+
+Now Grafana is accessible in `http://nematdoust.osdl.ir/` with defauld credentials.
+
+I have added two pre-built dashboards for VMSingle and VMAgent and also created a datasource to VMSingle and tried to expose metrics that are not, in order to avoid `No Data` in dashboard panels. 
+
+
 ## Alerting Pipeline
 
 Now I am going to deploy an alerting pipeline. For that reason I targeted one of my own metrics as condition of alert. 
