@@ -456,11 +456,82 @@ spec:
           for: 1s
 ```
 
+Defining label for VMRole component is important because of using it in VMAlert to select this VMRule and use its condition in evaluation.
 
+We must define a group for alert that is used later in VMAlertManager. Then a rule is defined with an alert name and expression that is going to be queried on data source. Also we specify that if condition is true for 1 second, state of alert will be changed from `pending` to `firing` 
    
-3. VMAlert: Get rules from VMRule and query them to VMSingle, if true notify VMAlertManager and remote write to VMSingle ( optional but nice to have )
-4. VMAlertManager: Check fired alerts and send them periodically to a service to expose alerts to user.
-5. Alert exposing service created using Flask: Get alerts from VMAlertmanager and show them to user.
+2. VMAlert: Get rules from VMRule and query them to VMSingle, if true, notify VMAlertManager and remote write to VMSingle ( optional but nice to have )
+
+```
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAlert
+metadata:
+  name: vmalert
+  namespace: monitoring-system
+spec:
+  replicaCount: 1
+  datasource:
+    url: "http://vmsingle-vmsingle.monitoring-system.svc:8429"
+  notifiers:
+    - url: "http://vmalertmanager-vmalertmanager.monitoring-system.svc:9093"
+  remoteWrite:
+    url: "http://vmsingle-vmsingle.monitoring-system.svc:8429"
+  evaluationInterval: "5s"
+  ruleSelector:
+    matchLabels:
+      app: vmrule
+```
+
+VMAlert is going to query expression of VMRule on VMSingle ( using this api call : `http://vmsingle-vmsingle.monitoring-system.svc:8429/api/v1/query?query={exp}` ) and based on result, it fires alert to VMAlertmanager. It also remote writes the alert into VMSingle ( using this api call : `http://vmsingle-vmsingle.monitoring-system.svc:8429/api/v1/write` ). VMAlert evaluates the condition every 5 seconds.  
+
+  
+3. VMAlertManager: Check fired alerts and send them periodically to a service to expose alerts to user.
+
+```
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAlertmanager
+metadata:
+  name: vmalertmanager
+  namespace: monitoring-system
+spec:
+  replicaCount: 1
+  configRawYaml: |
+    route:
+      receiver: 'webhook'
+      group_wait: 10s
+      group_interval: 30s
+      repeat_interval: 1m
+    receivers:
+      - name: 'webhook'
+        webhook_configs:
+          - url: 'http://webhook-service.monitoring-system.svc.cluster.local:8080/webhookapp/alerts'
+            send_resolved: true
+```
+
+I have defined a receiver here to send alerts. The receiver of alert is chosen and also specified in `receivers` section. Also some other configs are needed as below:
+**group_wait**: after getting a fired alert, VMAlertManager first waits for 10 seconds in order to get some other alerts with the same group name and fire them all together with only one notification instead of one notif for each of them. 
+
+**group_interval**: VMAlertManager searches each group of alerts and check if new alert is fired or if `repeat_interval` is reached, if one of them is happened then a notif of alert will be sent. 
+
+**repeat_interval**: If an alert stays in firing state, it will be sent every 1 minute as a reminder.
+  
+4. Alert exposing service created using Flask: Get alerts from VMAlertmanager and show them to user.
+
+I have developed a notification REST-API service using Flask. It gets alerts using POST request on `/webhookapp/alerts`  and returns the list of alerts using GET request on the same path. 
+
+Service is exposed using Ingress on `nematdoust.osdl.ir/webhookapp/alerts` and returns the list of alerts already fired. 
+
+You can find more about webhook app in this repo: https://github.com/AliNematDoost/REST_API_Webhook
 
 
+## End to End Test for Alert pipeline
+
+First of all I should mention that I have chosen a metric and a condition that makes the expression to be always True. ( number of create operations of hamamooz_backup_jobs_total metric is 14 which is more than 10 )
+
+So we expect alert to be fired continuously and notifications to be shown in `nematdoust.osdl.ir/webhookapp/alerts` like this :
+<img width="1172" height="947" alt="image" src="https://github.com/user-attachments/assets/fb858c43-77cc-4950-b5d0-0f9f85b4ad9b" />
+
+Notification webhook is correctly showing fired alerts of the same group and name we already created in VMRule. 
+
+but let's check alert status after each hop of pipeline :
 
