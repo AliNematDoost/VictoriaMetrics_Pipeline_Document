@@ -438,7 +438,7 @@ I have created components for deploying Grafana which are placed in `grafana/` (
 
 Now Grafana is accessible in `http://nematdoust.osdl.ir/` with defauld credentials.
 
-I have added two pre-built dashboards for VMSingle and VMAgent and also created a datasource to VMSingle and tried to expose metrics that are not, in order to avoid `No Data` in dashboard panels. 
+I have added two pre-built dashboards ( 10229 and 12683 ) for VMSingle and VMAgent and also created a datasource to VMSingle and tried to expose metrics that are not, in order to avoid `No Data` in dashboard panels. 
 
 
 ## Alerting Pipeline
